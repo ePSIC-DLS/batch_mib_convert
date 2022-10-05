@@ -20,7 +20,7 @@ import os
 import numpy as np
 import argparse
 import sys
-sys.path.append('/dls_sw/e02/scripts/batch_mib_convert')
+sys.path.append('/dls_sw/e02/software/batch_mib_convert')
 from IdentifyPotentialConversions import check_differences
 
 
@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
 
     if args.folder is None: 
-        os.system('\n cd ' + outputs_dir + '\n module load global/testcluster \n qsub -t 1-' + str(n_files) +  ' -tc ' + str(max_c) + ' /dls_sw/e02/scripts/batch_mib_convert/batch_mib_convert_testcluster.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit)
+        os.system('\n cd ' + outputs_dir + '\n module load global/testcluster \n qsub -t 1-' + str(n_files) +  ' -tc ' + str(max_c) + ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_testcluster.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit)
     else:
-        os.system('\n cd ' + outputs_dir + '\n module load global/testcluster \n qsub -t 1-' + str(n_files) +  ' -tc ' + str(max_c) + ' /dls_sw/e02/scripts/batch_mib_convert/batch_mib_convert_testcluster.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit+ ' ' + args.folder)
+        os.system('\n cd ' + outputs_dir + '\n module load global/testcluster \n qsub -t 1-' + str(n_files) +  ' -tc ' + str(max_c) + ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_testcluster.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit+ ' ' + args.folder)
 
