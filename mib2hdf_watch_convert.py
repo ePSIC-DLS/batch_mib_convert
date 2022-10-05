@@ -1,11 +1,11 @@
 import argparse
 import os
-from IdentifyPotentialConversions import check_differences
+from batch_mib_convert.IdentifyPotentialConversions import check_differences
 import gc
-from mib_dask_import import mib_to_h5stack
-from mib_dask_import import parse_hdr
-from mib_dask_import import mib_dask_reader
-from mib_dask_import import get_mib_depth
+from batch_mib_convert.mib_dask_import import mib_to_h5stack
+from batch_mib_convert.mib_dask_import import parse_hdr
+from batch_mib_convert.mib_dask_import import mib_dask_reader
+from batch_mib_convert.mib_dask_import import get_mib_depth
 import time
 import pprint
 import hyperspy.api as hs
@@ -14,7 +14,31 @@ import numpy as np
 import h5py
 import shutil
 
-print(pxm.__file__)
+# ---------------------------------------------------------------
+# Use python logging
+import logging
+
+# Let the log messages contain some extra information.
+formatter = logging.Formatter("%(asctime)s    %(process)5d %(processName)-12s %(threadName)-12s                   %(levelname)-8s %(pathname)s:%(lineno)d %(message)s")
+for handler in logging.getLogger().handlers:
+    handler.setFormatter(formatter)
+
+# Set the debug log level.
+logging.getLogger().setLevel("DEBUG")
+
+# Make a logger for this module.
+logger = logging.getLogger(__name__)
+
+# Log the version of code we are running.
+from . import __version__
+logger.debug(f"{__name__} version {__version__}")
+
+# ---------------------------------------------------------------
+
+# Print the filename where the pxm module is.
+logger.debug(f"pxm.__file__ is {pxm.__file__}")
+
+# ---------------------------------------------------------------
 
 hs.preferences.GUIs.warn_if_guis_are_missing = False
 hs.preferences.save()
@@ -75,7 +99,7 @@ def bin_sig(d, bin_fact):
     try:
         d_sigbin = d_crop.rebin(scale=(1,1,bin_fact,bin_fact))
     except ValueError:
-        print('Rebinning does not align with data dask chunks. Pass non-lazy signal before binning.')
+        logger.debug('Rebinning does not align with data dask chunks. Pass non-lazy signal before binning.')
         return
     return d_sigbin
 
@@ -100,7 +124,7 @@ def bin_nav(d, bin_fact):
     try:
         d_navbin = d_crop.rebin(scale=(bin_fact,bin_fact,1,1))
     except ValueError:
-        print('Rebinning does not align with data dask chunks. Pass non-lazy signal before binning.')
+        logger.debug('Rebinning does not align with data dask chunks. Pass non-lazy signal before binning.')
         return
     return d_navbin
 
@@ -148,8 +172,8 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
     for mib_path in mib_to_convert:
         mib_path = os.path.dirname(mib_path)
 
-        print('********************************************************')
-        print('Currently active in this directory: %s' % mib_path.split('/')[-1])
+        logger.debug('********************************************************')
+        logger.debug('Currently active in this directory: %s' % (mib_path.split('/')[-1]))
         # Determine mib files in this folder
         mib_num = 0
         mib_list = []
@@ -158,34 +182,34 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                 mib_num += 1
                 mib_list.append(file)
                 hdr_info = parse_hdr(os.path.join('/', mib_path, file))
-                print(hdr_info)
+                logger.debug(hdr_info)
 
         # If there is only 1 mib file in folder load it as a hyperspy Signal2D
         if mib_num == 1:
             # Load the .mib file and determine whether it contains TEM or STEM
             # data based on frame exposure times.
             try:
-                print('mib path ', mib_path)
+                logger.debug(f'mib path {mib_path}')
 
                 depth = get_mib_depth(hdr_info, hdr_info['title'] + '.mib')
-                print('number of frames: ', depth)
+                logger.debug(f'number of frames: {depth}')
                 # Only write the h5 stack for large scan arrays
 #                if (depth > 300*300) or (hdr_info['Counter Depth (number)'] > 8):
                 if (depth > 300*300):
-                    print('large file 4DSTEM file - first saving the stack into h5 file!')
+                    logger.debug('large file 4DSTEM file - first saving the stack into h5 file!')
 
                     merlin_ind = hdr_info['title'].split('/').index('Merlin')
                     h5_path = proc_location +'/'+ os.path.join(*hdr_info['title'].split('/')[(merlin_ind+1):-1])+ '/' + hdr_info['title'].split('/')[-1] + '.h5'
                     if not os.path.exists(os.path.dirname(h5_path)):
                         os.makedirs(os.path.dirname(h5_path))
-                    print(h5_path)
+                    logger.debug(h5_path)
                     pxm.utils.io_utils.mib_to_h5stack(hdr_info['title'] + '.mib', h5_path)
                     dp = pxm.utils.io_utils.h5stack_to_pxm(h5_path, hdr_info['title'] + '.mib')
                 else:
-                    print(hdr_info['title'] + '.mib')
+                    logger.debug(f"hdr_info[title].mib is {hdr_info['title'] + '.mib'}")
                     dp = pxm.load_mib(hdr_info['title'] + '.mib')
-                print(dp)
-                pprint.pprint(dp.metadata)
+                logger.debug(dp)
+                logger.debug(f"pxm.load_mib returned\n{pprint.pformat(dp.metadata)}")
                 dp.compute(show_progressbar = False)
                 t1 = time.time()
                 if dp.metadata.Signal.signal_type == 'electron_diffraction':
@@ -194,7 +218,7 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                     STEM_flag = False
 
             except ValueError:
-                print('file could not be read into an array!')
+                logger.debug('file could not be read into an array!')
             # Process single .mib file identified as containing TEM data.
             # This just saves the data as an .hdf5 image stack.
             if STEM_flag is False:
@@ -204,7 +228,7 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                     os.makedirs(saving_path)
                 
 
-                print('saving here: ',saving_path)
+                logger.debug(f'saving here: {saving_path}')
                 # Calculate summed diffraction pattern
                 dp_sum = max_contrast8(dp.sum())
                 dp_sum = change_dtype(dp_sum)
@@ -229,7 +253,7 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                 
                 else:
                     saving_path = os.path.join(proc_location, get_timestamp(mib_path))
-                print('saving path: ', saving_path)
+                logger.debug(f'saving path: {saving_path}')
                 if not os.path.exists(saving_path):
                      os.makedirs(saving_path)
 
@@ -253,14 +277,14 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                 # save data
 
                 try:
-                    print('Saving average diffraction pattern')
+                    logger.debug('Saving average diffraction pattern')
                     file_dp = get_timestamp(mib_path) + '_subset_dp'
                     sum_dp_subset = hs.signals.Signal2D(sum_dp_subset)
                     sum_dp_subset.save(saving_path+'/'+file_dp, extension = 'tiff')
                     sum_dp_subset.save(saving_path+'/'+file_dp, extension = 'jpg')
                     sum_dp_subset.save(saving_path+'/'+file_dp)
-                    print('Saving ibf image')
-                    print(saving_path)
+                    logger.debug('Saving ibf image')
+                    logger.debug(saving_path)
                     ibf = hs.signals.Signal2D(ibf)
                     file_ibf =  get_timestamp(mib_path) + '_ibf'
                     ibf.save(saving_path+'/'+file_ibf, extension = 'tiff')
@@ -269,26 +293,26 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
 
                     t2 = time.time()
                 except:
-                    print('Issue with saving images!')
+                    logger.debug('Issue with saving images!')
 
 #                    # Save binned data in .hdf5 file
-                print('Saving binned diffraction data: ' + get_timestamp(mib_path) + '.hdf5')
+                logger.debug('Saving binned diffraction data: ' + get_timestamp(mib_path) + '.hdf5')
                 dp_bin_sig.save(saving_path+ '/'+'binned_diff_' + get_timestamp(mib_path), extension = 'hdf5')
-                print('Saved binned diffraction data: binned_' + get_timestamp(mib_path) + '.hdf5')
+                logger.debug('Saved binned diffraction data: binned_' + get_timestamp(mib_path) + '.hdf5')
                 del dp_bin_sig
-                print('Saving binned navigation data: ' + get_timestamp(mib_path) + '.hdf5')
+                logger.debug('Saving binned navigation data: ' + get_timestamp(mib_path) + '.hdf5')
                 dp_bin_nav.save(saving_path+ '/'+'binned_nav_' + get_timestamp(mib_path) , extension = 'hdf5')
-                print('Saved binned navigation data: binned_' + get_timestamp(mib_path) + '.hdf5')
+                logger.debug('Saved binned navigation data: binned_' + get_timestamp(mib_path) + '.hdf5')
                 del dp_bin_nav
 #                 # Save complete .hdf5 files
-                print('Saving hdf5 : ' + get_timestamp(mib_path) +'_data.hdf5')
+                logger.debug('Saving hdf5 : ' + get_timestamp(mib_path) +'_data.hdf5')
                 dp.save(saving_path + '/' + get_timestamp(mib_path) + '_data', extension = 'hdf5')
-                print('Saved hdf5 : ' + get_timestamp(mib_path) +'_data.hdf5')
+                logger.debug('Saved hdf5 : ' + get_timestamp(mib_path) +'_data.hdf5')
                 tmp = []
                 np.savetxt(saving_path+'/' + get_timestamp(mib_path) + 'fully_saved', tmp)
                 # Adding mask to hdf5
                 
-                mask_file = '/dls_sw/e02/medipix_mask/Merlin_12bit_mask.h5'
+                mask_file = '/dls_sw/e02/medipix_mask/200keV_man_mask.h5'
                 mask_key = '/data/mask'
                 
                 with h5py.File(mask_file, 'r') as f:
@@ -297,12 +321,12 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                 
                 with h5py.File(saving_path + '/' + get_timestamp(mib_path) + '_data.hdf5', 'r+', libver='latest') as f:
                     mask_group = f.create_group('/mask')
-                    mask_group['Merlin_12bit_mask'] = mask
+                    mask_group['data_200kV'] = mask
                 
                 
                 t3 = time.time()
                 meta_path = find_metadat_file(get_timestamp(mib_path), raw_path)
-                print('metadata path: ', meta_path)
+                logger.debug(f'metadata path: {meta_path}')
                 write_vds(saving_path + '/' + get_timestamp(mib_path) + '_data.hdf5', saving_path + '/' + get_timestamp(mib_path) + '_vds.h5', metadata_path=meta_path)
 
                 del dp
@@ -321,13 +345,13 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                 saving_path = proc_location +'/'+ os.path.join(*mib_path.split('/')[6:])
             if not os.path.exists(saving_path):
                 os.makedirs(saving_path)
-            print('saving here: ', saving_path)
+            logger.debug(f'saving here: {saving_path}')
             for k, file in enumerate(mib_list):
-                print(mib_path)
-                print(file)
+                logger.debug(mib_path)
+                logger.debug(file)
                 t0 = time.time()
                 dp = pxm.load_mib('/' +mib_path + '/'+ file)
-                pprint.pprint(dp.metadata)
+                logger.debug(f"pxm.load_mib returned\n{pprint.pformat(dp.metadata)}")
                 if dp.metadata.Signal.signal_type == 'electron_diffraction':
                     STEM_flag = True
                 else:
@@ -348,11 +372,11 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
 
          # Print timing information
         if t1 is not None:
-            print('time to load data: ', int(t1-t0))
+            logger.debug(f'time to load data: {int(t1-t0)} seconds')
         if t2 is not None:
-            print('time to save last image: ', int(t2-t0))
+            logger.debug(f'time to save last image: {int(t2-t0)} seconds')
         if t3 is not None:
-            print('time to save full hdf5: ', int(t3-t0))
+            logger.debug(f'time to save full hdf5: {int(t3-t0)} seconds')
     return
 
 
@@ -387,9 +411,9 @@ def write_vds(source_h5_path, writing_h5_path, entry_key='Experiments/__unnamed_
             with h5py.File(source_h5_path,'r') as f:
                 vsource = h5py.VirtualSource(f[entry_key])
                 sh = vsource.shape
-                print("4D shape:", sh)
+                logger.debug(f"4D shape: {sh}")
         except KeyError:
-            print('Key provided for the input data file not correct')
+            logger.debug('Key provided for the input data file not correct')
             return
     
         layout = h5py.VirtualLayout(shape=tuple((np.prod(sh[:2]), sh[-2], sh[-1])), dtype = np.uint16)
@@ -410,19 +434,19 @@ def write_vds(source_h5_path, writing_h5_path, entry_key='Experiments/__unnamed_
             with h5py.File(source_h5_path,'r') as f:
                 vsource = h5py.VirtualSource(f[entry_key])
                 sh = vsource.shape
-                print("4D shape:", sh)
+                logger.debug(f"4D shape {sh}")
         except KeyError:
-            print('Key provided for the input data file not correct')
+            logger.debug('Key provided for the input data file not correct')
             return
     
         layout = h5py.VirtualLayout(shape=tuple((np.prod(sh[:2]), sh[-2], sh[-1])), dtype = np.uint16)
         for i in range(sh[0]):
             for j in range(sh[1]):
                 layout[i * sh[1] + j] = vsource[i, j, :, :]
-        print('Adding vds to: ', os.path.join(dest_path, os.path.basename(metadata_path)))    
+        logger.debug('Adding vds to: ' + os.path.join(dest_path, os.path.basename(metadata_path)))    
         with h5py.File(os.path.join(dest_path, os.path.basename(metadata_path)), 'r+', libver='latest') as f:
             f.create_virtual_dataset(vds_key, layout)
-            f['/data/mask'] = h5py.ExternalLink('/dls_sw/e02/medipix_mask/Merlin_12bit_mask.h5', "/data/mask")
+            f['/data/mask'] = h5py.ExternalLink('/dls_sw/e02/medipix_mask/200keV_man_mask.h5', "/data/mask")
             f['metadata']['4D_shape'] = tuple(sh)
         
     return
@@ -440,7 +464,7 @@ def find_metadat_file(timestamp, acquisition_path):
     for path in metadata_file_paths:
         if timestamp == path.split('/')[-1].split('.')[0]:
             return path
-    print('No metadata file could be matched.')
+    logger.debug('No metadata file could be matched.')
     return 
     
 
@@ -468,7 +492,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     HDF5_dict= check_differences(args.beamline, args.year, args.visit, args.folder)
     to_convert = HDF5_dict['MIB_to_convert']
-    print('to convert', to_convert)
+    logger.debug(f'to convert {to_convert}')
 
     try:
         if args.folder is not None:
@@ -478,5 +502,5 @@ if __name__ == "__main__":
             convert(args.beamline, args.year, args.visit, [to_convert[int(args.folder_num)-1]])
 
     except Exception as e:
-        print('** ERROR processing** \n ' , e)
+        logger.debug(f'** ERROR processing** \n {e}')
 

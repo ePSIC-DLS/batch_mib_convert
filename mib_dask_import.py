@@ -26,6 +26,14 @@ from scipy.signal import find_peaks
 import h5py
 from struct import unpack
 
+# ---------------------------------------------------------------
+# Use python logging
+import logging
+
+# Make a logger for this module.
+logger = logging.getLogger(__name__)
+# ---------------------------------------------------------------
+
 hs.preferences.GUIs.warn_if_guis_are_missing = False
 hs.preferences.save()
 
@@ -213,7 +221,7 @@ def add_crosses(a):
     b = da.concatenate((b[:, :a_half[0], :], z_array2, b[:, a_half[0]:, :]), axis=-2)
 
     if len(original_shape) == 4:
-        print('reshaping to the original shape')
+        logger.debug('reshaping to the original shape')
         b = b.reshape(original_shape[0], original_shape[1], original_shape[2] + 3, original_shape[3] + 3)
 
     return b
@@ -445,7 +453,7 @@ def read_exposures(hdr_info, fp, pct_frames_to_read=0.1):
                         str_list = [chr(d[line][n]) for n in range(d.shape[1])]
                         exp_time.append(float(''.join(str_list)))
             except ValueError:
-                print('Frame exposure times are not appearing in header!')
+                logger.debug('Frame exposure times are not appearing in header!')
         # TODO complete the cases for the non-RAW scenarios
         else:
             try:
@@ -458,7 +466,7 @@ def read_exposures(hdr_info, fp, pct_frames_to_read=0.1):
                     str_list = [chr(d[line][n]) for n in range(d.shape[1])]
                     exp_time.append(float(''.join(str_list)))
             except ValueError:
-                print('Frame exposure times are not appearing in header!')
+                logger.debug('Frame exposure times are not appearing in header!')
     return exp_time
 
 
@@ -508,7 +516,7 @@ def STEM_flag_dict(exp_times_list):
         # Check that the smallest time is the majority of the values
         exp_time = max(times_set, key=exp_times_list.count)
         if exp_times_list.count(exp_time) < int(0.9 * len(exp_times_list)):
-            print('Something wrong with the triggering!')
+            logger.debug('Something wrong with the triggering!')
         peaks = [i for i, e in enumerate(exp_times_list) if e != exp_time]
         # Diff between consecutive elements of the array
         lines = np.ediff1d(peaks)
@@ -621,9 +629,9 @@ def _stack_h5dump(data, hdr_info, saving_path, raw=False, raw_binary=False):
     for i in range(iters_num):
         if (i + 1) * stack_num < data.shape[0]:
             if i == 0:
-                print(i)
+                logger.debug(i)
                 data_dump0 = data[:(i + 1) * stack_num, :]
-                print(data_dump0.shape)
+                logger.debug(data_dump0.shape)
                 if raw_binary is True:
                     data_dump1 = np.unpackbits(data_dump0)
                     data_dump1.reshape(data_dump0.shape[0], data_dump0.shape[1] * 8)
@@ -634,13 +642,13 @@ def _stack_h5dump(data, hdr_info, saving_path, raw=False, raw_binary=False):
                     data_dump1 = data_dump0.reshape(data_dump0.shape[0], width, height)
 
                 _h5_chunk_write(data_dump1, saving_path)
-                print(data_dump1.shape)
+                logger.debug(data_dump1.shape)
                 del data_dump0
                 del data_dump1
             else:
-                print(i)
+                logger.debug(i)
                 data_dump0 = data[i * stack_num:(i + 1) * stack_num, :]
-                print(data_dump0.shape)
+                logger.debug(data_dump0.shape)
                 if raw_binary is True:
                     data_dump1 = np.unpackbits(data_dump0)
                     data_dump1.reshape(data_dump0.shape[0], data_dump0.shape[1] * 8)
@@ -650,13 +658,13 @@ def _stack_h5dump(data, hdr_info, saving_path, raw=False, raw_binary=False):
                 else:
                     data_dump1 = data_dump0.reshape(data_dump0.shape[0], width, height)
                 _h5_chunk_write(data_dump1, saving_path)
-                print(data_dump1.shape)
+                logger.debug(data_dump1.shape)
                 del data_dump0
                 del data_dump1
         else:
-            print(i)
+            logger.debug(i)
             data_dump0 = data[i * stack_num:, :]
-            print(data_dump0.shape)
+            logger.debug(data_dump0.shape)
             if raw_binary is True:
                 data_dump1 = np.unpackbits(data_dump0)
                 data_dump1.reshape(data_dump0.shape[0], data_dump0.shape[1] * 8)
@@ -666,7 +674,7 @@ def _stack_h5dump(data, hdr_info, saving_path, raw=False, raw_binary=False):
             else:
                 data_dump1 = data_dump0.reshape(data_dump0.shape[0], width, height)
             _h5_chunk_write(data_dump1, saving_path)
-            print(data_dump1.shape)
+            logger.debug(data_dump1.shape)
             del data_dump0
             del data_dump1
             return
@@ -689,12 +697,12 @@ def _h5_chunk_write(data, saving_path):
     """
     if os.path.exists(saving_path):
         with h5py.File(saving_path, 'a') as hf:
-            print('appending to existing dataset')
+            logger.debug('appending to existing dataset')
             hf['data_stack'].resize((hf['data_stack'].shape[0] + data.shape[0]), axis=0)
             hf['data_stack'][-data.shape[0]:, :, :] = data
     else:
         hf = h5py.File(saving_path, 'w')
-        print('creating the h5 file')
+        logger.debug('creating the h5 file')
         hf.create_dataset('data_stack', data=data, maxshape=(None, data.shape[1], data.shape[2]), compression='gzip')
     return
 
@@ -805,8 +813,8 @@ def reshape_4DSTEM_SumFrames(data):
     data_skip.data = data_skip.data.reshape(n_lines, line_len, det_size, det_size)
     data_skip.axes_manager._axes.insert(0, data_skip.axes_manager[0].copy())
     data_skip.get_dimensions_from_data()
-    print('Reshaping using the frame intensity sums of the first 20 lines')
-    print('Number of frames skipped at the beginning: ', skip_ind)
+    logger.debug('Reshaping using the frame intensity sums of the first 20 lines')
+    logger.debug(f'Number of frames skipped at the beginning: {skip_ind}')
     # Croppimg the flyaback pixel at the start
     data_skip = data_skip.inav[1:]
     return data_skip, skip_ind
@@ -845,11 +853,11 @@ def reshape_4DSTEM_FlyBack(data):
     line_len = data.metadata.Signal.scan_X
 
     n_lines = floor((data.data.shape[0] - skip_ind) / line_len)
-    print(n_lines)
+    logger.debug(n_lines)
 
     # Remove skipped frames
     data_skip = data.inav[skip_ind:skip_ind + (n_lines * line_len)]
-    print(data_skip.data.shape)
+    logger.debug(data_skip.data.shape)
     # Reshape signal
     data_skip.data = data_skip.data.reshape(n_lines, line_len, det_size, det_size)
     data_skip.axes_manager._axes.insert(0, data_skip.axes_manager[0].copy())
@@ -901,11 +909,11 @@ def h5stack_to_hs(h5_path, hdr_info):
     data_hs.metadata.Signal.flyback_times = data_dict['flyback_times']
 
     if data_hs.metadata.Signal.signal_type == 'TEM' and data_hs.metadata.Signal.exposure_time != None:
-        print('This mib file appears to be TEM data. The stack is returned with no reshaping.')
+        logger.debug('This mib file appears to be TEM data. The stack is returned with no reshaping.')
 
     # to catch single frames:
     if data_hs.axes_manager[0].size == 1:
-        print('This mib file is a single frame.')
+        logger.debug('This mib file is a single frame.')
 
     try:
         # If the exposure time info not appearing in the header bits use reshape_4DSTEM_SumFrames
@@ -915,13 +923,13 @@ def h5stack_to_hs(h5_path, hdr_info):
             data_hs.metadata.Signal.signal_type = 'STEM'
             data_hs.metadata.Signal.frames_number_skipped = skip_ind
         else:
-            print('reshaping using flyback pixel')
+            logger.debug('reshaping using flyback pixel')
             data_hs = reshape_4DSTEM_FlyBack(data_hs)
     except TypeError:
-        print(
+        logger.debug(
             'Warning: Reshaping did not work or TEM data with no exposure info. Returning the stack with no reshaping!')
     except ValueError:
-        print(
+        logger.debug(
             'Warning: Reshaping did not work or TEM data with no exposure info. Returning the stack with no reshaping!')
     return data_hs
 
@@ -1001,35 +1009,35 @@ def mib_dask_reader(mib_filename, h5_stack_path=None):
     data_hs.metadata.Signal.exposure_time = data_dict['exposure time']
     data_hs.metadata.Signal.frames_number_skipped = data_dict['number of frames_to_skip']
     data_hs.metadata.Signal.flyback_times = data_dict['flyback_times']
-    print(data_hs)
+    logger.debug(data_hs)
 
     # only attempt reshaping if it is not already reshaped!
 
     if len(data_hs.data.shape) == 3:
         try:
             if data_hs.metadata.Signal.signal_type == 'TEM':
-                print('This mib file appears to be TEM data. The stack is returned with no reshaping.')
+                logger.debug('This mib file appears to be TEM data. The stack is returned with no reshaping.')
                 return data_hs
             # to catch single frames:
             if data_hs.axes_manager[0].size == 1:
-                print('This mib file is a single frame.')
+                logger.debug('This mib file is a single frame.')
                 return data_hs
             # If the exposure time info not appearing in the header bits use reshape_4DSTEM_SumFrames
             # to reshape otherwise use reshape_4DSTEM_FlyBack function
             if data_hs.metadata.Signal.signal_type == 'STEM' and data_hs.metadata.Signal.exposure_time is None:
-                print('reshaping using sum frames intensity')
+                logger.debug('reshaping using sum frames intensity')
                 (data_hs, skip_ind) = reshape_4DSTEM_SumFrames(data_hs)
                 data_hs.metadata.Signal.signal_type = 'STEM'
                 data_hs.metadata.Signal.frames_number_skipped = skip_ind
             else:
-                print('reshaping using flyback pixel')
+                logger.debug('reshaping using flyback pixel')
                 data_hs = reshape_4DSTEM_FlyBack(data_hs)
         except TypeError:
-            print(
+            logger.debug(
                 'Warning: Reshaping did not work or TEM data with no exposure info. Returning the stack with no reshaping!')
             return data_hs
         except ValueError:
-            print(
+            logger.debug(
                 'Warning: Reshaping did not work or TEM data with no exposure info. Returning the stack with no reshaping!')
             return data_hs
     return data_hs
