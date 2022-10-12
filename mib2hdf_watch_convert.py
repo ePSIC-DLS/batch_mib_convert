@@ -312,7 +312,7 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                 np.savetxt(saving_path+'/' + get_timestamp(mib_path) + 'fully_saved', tmp)
                 # Adding mask to hdf5
                 
-                mask_file = '/dls_sw/e02/medipix_mask/200keV_man_mask.h5'
+                mask_file = '/dls_sw/e02/medipix_mask/Merlin_12bit_mask.h5'
                 mask_key = '/data/mask'
                 
                 with h5py.File(mask_file, 'r') as f:
@@ -320,8 +320,8 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                 
                 
                 with h5py.File(saving_path + '/' + get_timestamp(mib_path) + '_data.hdf5', 'r+', libver='latest') as f:
-                    mask_group = f.create_group('/mask')
-                    mask_group['data_200kV'] = mask
+                    f.create_dataset('data/mask', data = mask)
+
                 
                 
                 t3 = time.time()
@@ -446,7 +446,7 @@ def write_vds(source_h5_path, writing_h5_path, entry_key='Experiments/__unnamed_
         logger.debug('Adding vds to: ' + os.path.join(dest_path, os.path.basename(metadata_path)))    
         with h5py.File(os.path.join(dest_path, os.path.basename(metadata_path)), 'r+', libver='latest') as f:
             f.create_virtual_dataset(vds_key, layout)
-            f['/data/mask'] = h5py.ExternalLink('/dls_sw/e02/medipix_mask/200keV_man_mask.h5', "/data/mask")
+            f['/data/mask'] = h5py.ExternalLink('/dls_sw/e02/medipix_mask/Merlin_12bit_mask.h5', "/data/mask")
             f['metadata']['4D_shape'] = tuple(sh)
         
     return
