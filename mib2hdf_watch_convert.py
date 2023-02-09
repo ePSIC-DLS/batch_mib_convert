@@ -30,8 +30,8 @@ logging.getLogger().setLevel("DEBUG")
 logger = logging.getLogger(__name__)
 
 # Log the version of code we are running.
-from batch_mib_convert import __version__
-logger.debug(f"{__name__} version {__version__}")
+#from batch_mib_convert import __version__
+#logger.debug(f"{__name__} version {__version__}")
 
 # ---------------------------------------------------------------
 
