@@ -308,6 +308,8 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                 logger.debug('Saving hdf5 : ' + get_timestamp(mib_path) +'_data.hdf5')
                 dp.save(saving_path + '/' + get_timestamp(mib_path) + '_data', extension = 'hdf5')
                 logger.debug('Saved hdf5 : ' + get_timestamp(mib_path) +'_data.hdf5')
+                dp.save(saving_path + '/' + get_timestamp(mib_path) + '_data', extension = 'zspy')
+                logger.debug('Saved hdf5 : ' + get_timestamp(mib_path) +'_data.zspy')
                 tmp = []
                 np.savetxt(saving_path+'/' + get_timestamp(mib_path) + 'fully_saved', tmp)
                 # Adding mask to hdf5
