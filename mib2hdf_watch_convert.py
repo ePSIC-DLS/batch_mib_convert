@@ -14,6 +14,7 @@ import numpy as np
 import h5py
 import shutil
 import glob
+import re
 
 # ---------------------------------------------------------------
 # Use python logging
@@ -38,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 # Print the filename where the pxm module is.
 logger.debug(f"pxm.__file__ is {pxm.__file__}")
+logger.debug(f"hs.__file__ is {pxm.__file__}")
 
 # ---------------------------------------------------------------
 
@@ -277,7 +279,7 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                         os.makedirs(saving_path)
                 
                 else:
-                    saving_path = os.path.join(proc_location, get_timestamp(mib_path))
+                    saving_path = os.path.join(proc_location, get_sample_name(mib_path), get_timestamp(mib_path))
                 logger.debug(f'saving path: {saving_path}')
                 if not os.path.exists(saving_path):
                      os.makedirs(saving_path)
@@ -432,6 +434,17 @@ def get_timestamp(mib_path):
             time_id = file.split('.')[0]
     return time_id[:-5]
 
+def get_sample_name(mib_path):
+    path_entries = mib_path.split(os.sep)
+    merlin_ind = path_entries.index('Merlin')
+    # Check if after Merlin we have just time stamp
+    if re.match('\d{8}_\d{6}', path_entries[merlin_ind + 1]):
+        sample_name = ''
+        return sample_name
+    else:
+        sample_name = path_entries[merlin_ind + 1]
+        return sample_name 
+
 def write_vds(source_h5_path, writing_h5_path, entry_key='Experiments/__unnamed__/data', vds_key = '/data/frames', metadata_path = ''):
     if metadata_path is None:
         try:
@@ -519,7 +532,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     HDF5_dict= check_differences(args.beamline, args.year, args.visit, args.folder)
     to_convert = HDF5_dict['MIB_to_convert']
+
     logger.debug(f'to convert {to_convert}')
+    logger.debug(f'***************************')
+    logger.debug('folder_number passed is: ', int(args.folder_num))
+    logger.debug('path of file: ', to_convert[int(args.folder_num)-1])
+    logger.debug('***************************')
 
     try:
         if args.folder is not None:

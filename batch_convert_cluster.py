@@ -2,18 +2,20 @@
 This script is to perform batch parallel mib to hdf5 conversion on the DLS cluster
 
 Example of use in DLS Linux terminal:
-    module load python/epsic3.7
+    module load python/epsic3.10
     python batch_convert_cluster.py e02 2019 mg25124-2
 or with a specific folder option:
     python batch_convert_cluster.py e02 2019 cm22979-6 -folder Merlin/20191022_hot_graphene
+
+folder option has not been tested - Better to submit as an array - MD
 
 The user just needs to have this python script.
 A logs folder is created in the saving path , the processing folder of the visit, with the 
 outputs of the cluster jobs and also a list of the files to convert.
 
 In order to monitor the status of jobs, user needs to run:
-    module load global/cluster
-    watch qstat
+ssh wilson
+squeue -u <fedID>
 
 """
 
@@ -58,7 +60,7 @@ if __name__ == "__main__":
 
 
     if args.folder is None: 
-        os.system('\n cd ' + outputs_dir + '\n module load global/cluster \n qsub -t 1-' + str(n_files) +  ' -tc ' + str(max_c) + ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit)
+        os.system('\n cd ' + outputs_dir + '\n sbatch --array=0-' + str(n_files) + '%5' + ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_array.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit)
     else:
-        os.system('\n cd ' + outputs_dir + '\n module load global/cluster \n qsub -t 1-' + str(n_files) +  ' -tc ' + str(max_c) + ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit+ ' ' + args.folder)
+        os.system('\n cd ' + outputs_dir + '\n sbatch --array=0-' + str(n_files) + '%5' +  ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_array.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit+ ' ' + args.folder)
 
