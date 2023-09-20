@@ -13,6 +13,7 @@ import pyxem as pxm
 import numpy as np
 import h5py
 import shutil
+import glob
 
 # ---------------------------------------------------------------
 # Use python logging
@@ -207,7 +208,31 @@ def convert(beamline, year, visit, mib_to_convert, folder=None):
                     dp = pxm.utils.io_utils.h5stack_to_pxm(h5_path, hdr_info['title'] + '.mib')
                 else:
                     logger.debug(f"hdr_info[title].mib is {hdr_info['title'] + '.mib'}")
-                    dp = pxm.load_mib(hdr_info['title'] + '.mib')
+                    logger.debug(f"mib_path is: {file}")
+                    _mib_path = hdr_info['title'] + '.mib'
+                    #_time_stamp = os.path.dirname(_mib_path).split(os.sep)[-1]
+                    _time_stamp = os.path.basename(_mib_path).replace('_data.mib', '')
+                    _ = os.path.dirname(_mib_path).split(os.sep)
+                    _meta_folder = os.path.join(os.sep, *_[:-1])
+                    _meta_path = os.path.join(_meta_folder, _time_stamp + '.hdf')
+                    
+                    with h5py.File(_meta_path, 'r') as f:
+                        if 'SAVE_AS_STACK' in f['metadata'].keys():
+                            logger.debug(f"Flag for not reshaping detected - e.g. AZTEC TRIGGER")
+                    # If collecting AZTEC Triggered data use this with reshape=False
+                            dp = pxm.load_mib(hdr_info['title'] + '.mib', reshape=False)
+                            # dp.metadata.Signal.signal_type = 'electron_diffraction'
+                            meta_path = find_metadat_file(get_timestamp(mib_path), raw_path)
+                            saving_path = meta_path.replace('Merlin', 'processing/Merlin').split('.')[0]
+                            print(f'SAVING_PATH: {saving_path}')
+                            print(f'META_PATH: {meta_path}')
+                            #_dest_path = saving_path + '/' + get_timestamp(mib_path)
+                            shutil.copy(meta_path, saving_path)
+                            
+                        else:
+                            logger.debug(f"Reshaping as normal...")
+                            dp = pxm.load_mib(hdr_info['title'] + '.mib')
+
                 logger.debug(dp)
                 logger.debug(f"pxm.load_mib returned\n{pprint.pformat(dp.metadata)}")
                 dp.compute(show_progressbar = False)
