@@ -535,8 +535,8 @@ if __name__ == "__main__":
 
     logger.debug(f'to convert {to_convert}')
     logger.debug(f'***************************')
-    logger.debug('folder_number passed is: ', int(args.folder_num))
-    logger.debug('path of file: ', to_convert[int(args.folder_num)-1])
+    logger.debug(f'folder_number passed is: {int(args.folder_num)}')
+    logger.debug(f'path of file: {to_convert[int(args.folder_num)-1]}')
     logger.debug('***************************')
 
     try:
