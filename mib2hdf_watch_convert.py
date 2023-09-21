@@ -100,7 +100,7 @@ def bin_sig(d, bin_fact):
     to_crop = d.axes_manager[-1].size % bin_fact
     d_crop = d.isig[to_crop:,to_crop:]
     try:
-        d_sigbin = d_crop.rebin(scale=(1,1,bin_fact,bin_fact))
+        d_sigbin = d_crop.rebin(scale=(1,1,bin_fact,bin_fact), dtype=np.uint16)
     except ValueError:
         logger.debug('Rebinning does not align with data dask chunks. Pass non-lazy signal before binning.')
         return
@@ -125,7 +125,7 @@ def bin_nav(d, bin_fact):
     to_cropy = d.axes_manager[1].size % bin_fact
     d_crop = d.inav[to_cropx:,to_cropy:]
     try:
-        d_navbin = d_crop.rebin(scale=(bin_fact,bin_fact,1,1))
+        d_navbin = d_crop.rebin(scale=(bin_fact,bin_fact,1,1), dtype=np.uint16)
     except ValueError:
         logger.debug('Rebinning does not align with data dask chunks. Pass non-lazy signal before binning.')
         return
@@ -536,15 +536,15 @@ if __name__ == "__main__":
     logger.debug(f'to convert {to_convert}')
     logger.debug(f'***************************')
     logger.debug(f'folder_number passed is: {int(args.folder_num)}')
-    logger.debug(f'path of file: {to_convert[int(args.folder_num)-1]}')
+    logger.debug(f'path of file: {to_convert[int(args.folder_num)]}')
     logger.debug('***************************')
 
     try:
         if args.folder is not None:
-            convert(args.beamline, args.year, args.visit, [to_convert[int(args.folder_num)-1]], folder=args.folder)
+            convert(args.beamline, args.year, args.visit, [to_convert[int(args.folder_num)]], folder=args.folder)
         else:
 
-            convert(args.beamline, args.year, args.visit, [to_convert[int(args.folder_num)-1]])
+            convert(args.beamline, args.year, args.visit, [to_convert[int(args.folder_num)]])
 
     except Exception as e:
         logger.debug(f'** ERROR processing** \n {e}')

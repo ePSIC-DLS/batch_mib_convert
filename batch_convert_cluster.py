@@ -59,12 +59,12 @@ if __name__ == "__main__":
             f.write('\n')
 
 
-#    if args.folder is None: 
-#        os.system('\n cd ' + outputs_dir + '\n sbatch --array=0-' + str(n_files) + '%5' + ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_array.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit)
-#    else:
-#        os.system('\n cd ' + outputs_dir + '\n sbatch --array=0-' + str(n_files) + '%5' +  ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_array.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit+ ' ' + args.folder)#
-
     if args.folder is None: 
-        os.system('\n cd ' + outputs_dir + '\n sbatch --array=0-' + str(n_files) + ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_array.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit)
+        os.system('\n cd ' + outputs_dir + '\n sbatch --array=0-' + str(n_files) + '%3' + ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_array.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit)
     else:
-        os.system('\n cd ' + outputs_dir + '\n sbatch --array=0-' + str(n_files) +  ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_array.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit+ ' ' + args.folder)
+        os.system('\n cd ' + outputs_dir + '\n sbatch --array=0-' + str(n_files) + '%3' +  ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_array.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit+ ' ' + args.folder)
+
+#    if args.folder is None: 
+#        os.system('\n cd ' + outputs_dir + '\n sbatch --array=0-' + str(n_files) + ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_array.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit)
+#    else:
+#        os.system('\n cd ' + outputs_dir + '\n sbatch --array=0-' + str(n_files) +  ' /dls_sw/e02/software/batch_mib_convert/batch_mib_convert_array.sh ' + args.beamline + ' ' + args.year + ' ' + args.visit+ ' ' + #args.folder)
